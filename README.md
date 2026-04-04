@@ -16,13 +16,13 @@ AI coding agents (Claude Code, Codex CLI, Cursor) spend **30,000+ tokens per ses
 ## Installation
 
 ```bash
-npm install -g browser-cli
+npm install -g @tuandm/browser-cli
 ```
 
 Or install locally in your project:
 
 ```bash
-npm install browser-cli
+npm install @tuandm/browser-cli
 ```
 
 Chromium is installed automatically via Playwright during `npm install`.
@@ -321,7 +321,6 @@ AI Agent  →  Bash tool  →  CLI client (bin/browse.mjs)
 | Persistent daemon | **Yes** | Per-session | Per-session | Yes |
 | Runtime | Node.js | Node.js | Node.js | Rust + Node.js |
 
-## License
 ## Acknowledgments
 
 This project was inspired by [gstack](https://github.com/garrytan/gstack) by [Garry Tan](https://github.com/garrytan). The gstack project pioneered the idea of using a persistent Chromium daemon with a CLI interface for AI coding agents, demonstrating that plain Bash commands are dramatically more token-efficient than MCP-based browser tools. The core insight — that AI agents should talk to browsers via lightweight CLI calls instead of heavy protocol overhead — came from gstack's browse server architecture.
