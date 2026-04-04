@@ -24,8 +24,8 @@ mkdirSync(AUTH_DIR, { recursive: true });
 
 // Encryption for auth profiles — machine-specific key
 const MACHINE_KEY = scryptSync(
-  `${hostname()}-${userInfo().username}-browse-cli`,
-  'browse-cli-salt-v1',
+  `${hostname()}-${userInfo().username}-browser-cli`,
+  'browser-cli-salt-v1',
   32
 );
 

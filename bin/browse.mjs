@@ -4,9 +4,9 @@
  * Thin client for the persistent Chromium server.
  *
  * Usage:
- *   npx browse-cli goto https://example.com
- *   npx browse-cli snapshot -i
- *   npx browse-cli click @e3
+ *   npx browser-cli goto https://example.com
+ *   npx browser-cli snapshot -i
+ *   npx browser-cli click @e3
  */
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
