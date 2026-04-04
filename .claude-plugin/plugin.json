@@ -1,0 +1,19 @@
+{
+  "name": "browse-cli",
+  "version": "0.1.0",
+  "description": "Token-efficient browser automation for AI coding agents. Persistent headless Chromium with ARIA refs, CSS inspection, auth profiles. ~50-100 tokens per call vs ~1500 for MCP tools. Use for all browser verification, page testing, form filling, CSS debugging, responsive testing, and authenticated page access.",
+  "author": {
+    "name": "Tuan Duong",
+    "url": "https://github.com/tuandm"
+  },
+  "homepage": "https://github.com/tuandm/browser-cli",
+  "repository": "https://github.com/tuandm/browser-cli",
+  "license": "MIT",
+  "keywords": [
+    "browser", "playwright", "testing", "automation", "token-efficient",
+    "headless-chrome", "css-inspection", "ai-agent", "claude-code",
+    "aria-snapshot", "responsive", "auth-profiles"
+  ],
+  "skills": "./skills",
+  "commands": ["./commands"]
+}
