@@ -16,13 +16,13 @@ AI coding agents (Claude Code, Codex CLI, Cursor) spend **30,000+ tokens per ses
 ## Installation
 
 ```bash
-npm install -g browse-cli
+npm install -g browser-cli
 ```
 
 Or install locally in your project:
 
 ```bash
-npm install browse-cli
+npm install browser-cli
 ```
 
 Chromium is installed automatically via Playwright during `npm install`.
@@ -32,15 +32,15 @@ Chromium is installed automatically via Playwright during `npm install`.
 ## Quick Start
 
 ```bash
-browse-cli goto https://example.com     # Navigate (starts server automatically)
-browse-cli snapshot -i                    # Interactive elements with @e refs
-browse-cli click @e3                      # Click by ref
-browse-cli fill @e5 "hello"              # Fill input
-browse-cli css @e3 font-size             # Get computed CSS value
-browse-cli inspect @e3                    # Full box model + 16 computed styles
-browse-cli screenshot /tmp/page.png      # Take screenshot
-browse-cli snapshot -D                    # Diff: verify action changed the page
-browse-cli stop                           # Shutdown (or auto-stops after 30 min)
+browser-cli goto https://example.com     # Navigate (starts server automatically)
+browser-cli snapshot -i                    # Interactive elements with @e refs
+browser-cli click @e3                      # Click by ref
+browser-cli fill @e5 "hello"              # Fill input
+browser-cli css @e3 font-size             # Get computed CSS value
+browser-cli inspect @e3                    # Full box model + 16 computed styles
+browser-cli screenshot /tmp/page.png      # Take screenshot
+browser-cli snapshot -D                    # Diff: verify action changed the page
+browser-cli stop                           # Shutdown (or auto-stops after 30 min)
 ```
 
 The server auto-starts on first call (~3s). Subsequent calls take ~100-200ms. Cookies, tabs, and state persist between commands.
@@ -55,9 +55,9 @@ Add to `.claude/settings.json`:
 {
   "permissions": {
     "allow": [
-      "Bash(node*browse-cli*)",
+      "Bash(node*browser-cli*)",
       "Bash(node*browse.mjs*)",
-      "Bash(npx browse-cli*)"
+      "Bash(npx browser-cli*)"
     ]
   }
 }
@@ -65,16 +65,16 @@ Add to `.claude/settings.json`:
 
 ### 2. Add a rule (guides Claude to use Browse CLI by default)
 
-Create `.claude/rules/browse-cli.md`:
+Create `.claude/rules/browser-cli.md`:
 
 ```markdown
 # Browser Testing
 
 Use Browse CLI for all browser verification:
 
-    browse-cli goto <url>
-    browse-cli snapshot -i
-    browse-cli click @e3
+    browser-cli goto <url>
+    browser-cli snapshot -i
+    browser-cli click @e3
 
 Only fall back to Playwright MCP for drag-and-drop or pixel-diff comparisons.
 ```
@@ -85,10 +85,10 @@ Claude will now use Browse CLI commands via Bash instead of `mcp__playwright__*`
 
 ```bash
 # Instead of: mcp__playwright__browser_navigate url="..."  (~1,500 tokens)
-browse-cli goto https://example.com                         # (~75 tokens)
+browser-cli goto https://example.com                         # (~75 tokens)
 
 # Instead of: mcp__playwright__browser_snapshot              (~1,500 tokens)
-browse-cli snapshot -i                                       # (~75 tokens)
+browser-cli snapshot -i                                       # (~75 tokens)
 ```
 
 ## Features
@@ -120,9 +120,9 @@ Use refs in commands: `click @e2`, `fill @e3 "user@test.com"`, `css @e1 color`
 Verify an action changed the page:
 
 ```bash
-browse-cli snapshot -i          # Baseline
-browse-cli click @e2            # Do something
-browse-cli snapshot -D          # Shows what changed
+browser-cli snapshot -i          # Baseline
+browser-cli click @e2            # Do something
+browser-cli snapshot -D          # Shows what changed
 ```
 
 ```diff
@@ -138,11 +138,11 @@ browse-cli snapshot -D          # Shows what changed
 Read any computed CSS value or get a full box model:
 
 ```bash
-browse-cli css @e3 padding          # padding: 16px
-browse-cli css @e3 font-size        # font-size: 32px
-browse-cli css @e3 background-color # background-color: rgb(255, 0, 0)
+browser-cli css @e3 padding          # padding: 16px
+browser-cli css @e3 font-size        # font-size: 32px
+browser-cli css @e3 background-color # background-color: rgb(255, 0, 0)
 
-browse-cli inspect @e3              # Full JSON: box model + 16 computed styles
+browser-cli inspect @e3              # Full JSON: box model + 16 computed styles
 ```
 
 ### Live Style Mutation
@@ -150,10 +150,10 @@ browse-cli inspect @e3              # Full JSON: box model + 16 computed styles
 Modify CSS live with undo:
 
 ```bash
-browse-cli style @e3 color red          # Set color: red (was: rgb(0, 0, 0))
-browse-cli style @e3 padding 20px       # Set padding: 20px (was: 16px)
-browse-cli style --history              # Show all changes
-browse-cli style --undo                 # Revert last change
+browser-cli style @e3 color red          # Set color: red (was: rgb(0, 0, 0))
+browser-cli style @e3 padding 20px       # Set padding: 20px (was: 16px)
+browser-cli style --history              # Show all changes
+browser-cli style --undo                 # Revert last change
 ```
 
 ### Responsive Testing
@@ -161,7 +161,7 @@ browse-cli style --undo                 # Revert last change
 Screenshots at mobile, tablet, and desktop in one command:
 
 ```bash
-browse-cli responsive /tmp
+browser-cli responsive /tmp
 # mobile (375x812): /tmp/browse-mobile.png
 # tablet (768x1024): /tmp/browse-tablet.png
 # desktop (1280x720): /tmp/browse-desktop.png
@@ -173,18 +173,18 @@ Save and reload authenticated sessions. Encrypted with AES-256-CBC (machine-spec
 
 ```bash
 # First time: log in manually
-browse-cli goto https://your-app.com/login
-browse-cli handoff                          # Opens visible Chrome
+browser-cli goto https://your-app.com/login
+browser-cli handoff                          # Opens visible Chrome
 # ... log in (SSO, MFA, CAPTCHA) ...
-browse-cli resume                           # Back to headless
-browse-cli auth-save myapp                  # Save session encrypted
+browser-cli resume                           # Back to headless
+browser-cli auth-save myapp                  # Save session encrypted
 
 # Every subsequent time: one command
-browse-cli goto-auth https://your-app.com/dashboard --profile myapp
+browser-cli goto-auth https://your-app.com/dashboard --profile myapp
 
 # Manage profiles
-browse-cli auth-list                        # List saved profiles
-browse-cli auth-delete myapp                # Delete a profile
+browser-cli auth-list                        # List saved profiles
+browser-cli auth-delete myapp                # Delete a profile
 ```
 
 ## Command Reference
