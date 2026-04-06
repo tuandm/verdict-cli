@@ -521,8 +521,12 @@ const server = createServer(async (req, res) => {
     const { command, args = [] } = JSON.parse(body);
     const handler = commands[command];
     if (!handler) { res.writeHead(400); res.end(`Unknown: ${command}. Available: ${Object.keys(commands).join(', ')}`); return; }
-    res.writeHead(200); res.end(await handler(args));
-  } catch (e) { res.writeHead(500); res.end(`Error: ${e.message}`); }
+    const result = await handler(args);
+    res.writeHead(200); res.end(result);
+  } catch (e) {
+    if (!res.headersSent) { res.writeHead(500); }
+    res.end(`Error: ${e.message}`);
+  }
 });
 server.listen(port, '127.0.0.1', () => {
   writeFileSync(STATE_FILE, JSON.stringify({ port, token, pid: process.pid, started: new Date().toISOString() }), { mode: 0o600 });

@@ -32,7 +32,17 @@ async function startServer() {
   for (let i = 0; i < 60; i++) {
     await new Promise(r => setTimeout(r, 250));
     const state = readState();
-    if (state && isAlive(state.pid)) return state;
+    if (state && isAlive(state.pid)) {
+      // Verify the server actually responds before returning
+      try {
+        const res = await fetch(`http://127.0.0.1:${state.port}/`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${state.token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ command: 'status', args: [] })
+        });
+        if (res.ok) return state;
+      } catch {}
+    }
   }
   throw new Error('Server failed to start within 15 seconds');
 }
@@ -104,7 +114,7 @@ Advanced:
 
 let state = readState();
 if (!state || !isAlive(state.pid)) {
-  process.stderr.write('Starting browse server...\n');
+  process.stderr.write('Starting verdict server...\n');
   state = await startServer();
   process.stderr.write(`Server ready (port ${state.port})\n`);
 }
@@ -112,7 +122,7 @@ if (!state || !isAlive(state.pid)) {
 try {
   console.log(await send(state, command, args));
 } catch (e) {
-  if (e.cause?.code === 'ECONNREFUSED' || e.message?.includes('fetch failed')) {
+  if (e.cause?.code === 'ECONNREFUSED' || e.cause?.code === 'UND_ERR_SOCKET' || e.message?.includes('fetch failed')) {
     process.stderr.write('Server down, restarting...\n');
     state = await startServer();
     console.log(await send(state, command, args));
