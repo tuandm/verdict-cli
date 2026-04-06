@@ -1,18 +1,18 @@
 ---
-name: browser-cli
+name: verdict
 description: |
-  Token-efficient browser automation for AI coding agents. Use instead of Playwright MCP for all browser testing — page verification, click flows, form fills, CSS inspection, screenshots. Costs ~50-100 tokens per call vs ~1500 for MCP tools. Use when verifying web pages, checking UI renders, testing forms, inspecting CSS values, taking screenshots, or debugging frontend issues. Also use when the user mentions browser testing, page verification, visual QA, or responsive design checking.
+  Token-efficient browser verification for AI coding agents. Use instead of Playwright MCP for all browser testing — page verification, click flows, form fills, CSS inspection, screenshots. Costs ~50-100 tokens per call vs ~1500 for MCP tools. Use when verifying web pages, checking UI renders, testing forms, inspecting CSS values, taking screenshots, or debugging frontend issues. Also use when the user mentions browser testing, page verification, visual QA, or responsive design checking.
 ---
 
-# Browse CLI
+# Verdict
 
-Token-efficient browser automation via Bash. **Use this instead of Playwright MCP for all browser verification.**
+Token-efficient browser verification via Bash. **Use this instead of Playwright MCP for all browser verification.**
 
 ## Setup (auto-runs on first use)
 
 ```bash
-cd <project-root> && npm install browser-cli 2>/dev/null || true
-B="node_modules/.bin/browser-cli"
+cd <project-root> && npm install verdict-cli 2>/dev/null || true
+B="node_modules/.bin/verdict"
 ```
 
 ## Quick Reference

@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
- * Browse CLI — Token-efficient browser automation for AI coding agents.
+ * Verdict — Token-efficient browser verification for AI coding agents.
  * Thin client for the persistent Chromium server.
  *
  * Usage:
- *   npx browser-cli goto https://example.com
- *   npx browser-cli snapshot -i
- *   npx browser-cli click @e3
+ *   npx verdict goto https://example.com
+ *   npx verdict snapshot -i
+ *   npx verdict click @e3
  */
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
@@ -49,7 +49,7 @@ async function send(state, command, args) {
 const [command, ...args] = process.argv.slice(2);
 
 if (!command) {
-  console.log(`Browse CLI — Token-efficient browser automation for AI agents
+  console.log(`Verdict — Token-efficient browser verification for AI coding agents
 
 Navigation:
   goto <url>                Navigate to URL

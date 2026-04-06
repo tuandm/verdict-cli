@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * Browse CLI Server — Persistent headless Chromium daemon
- * Token-efficient browser automation for AI coding agents.
- * Speaks HTTP on localhost, controlled by the browse CLI client.
+ * Verdict Server — Persistent headless Chromium daemon
+ * Token-efficient browser verification for AI coding agents.
+ * Speaks HTTP on localhost, controlled by the verdict CLI client.
  */
 import { createServer } from 'node:http';
 import { writeFileSync, readFileSync, unlinkSync, existsSync, copyFileSync } from 'node:fs';
@@ -24,8 +24,8 @@ mkdirSync(AUTH_DIR, { recursive: true });
 
 // Encryption for auth profiles — machine-specific key
 const MACHINE_KEY = scryptSync(
-  `${hostname()}-${userInfo().username}-browser-cli`,
-  'browser-cli-salt-v1',
+  `${hostname()}-${userInfo().username}-verdict-cli`,
+  'verdict-cli-salt-v1',
   32
 );
 
@@ -526,6 +526,6 @@ const server = createServer(async (req, res) => {
 });
 server.listen(port, '127.0.0.1', () => {
   writeFileSync(STATE_FILE, JSON.stringify({ port, token, pid: process.pid, started: new Date().toISOString() }), { mode: 0o600 });
-  console.log(`Browse CLI server on port ${port} (PID ${process.pid})`);
+  console.log(`Verdict server on port ${port} (PID ${process.pid})`);
   resetIdle();
 });

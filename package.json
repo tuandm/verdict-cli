@@ -1,5 +1,5 @@
 {
-  "name": "@tuandm/browser-cli",
+  "name": "verdict-cli",
   "version": "0.1.0",
   "description": "Token-efficient browser CLI for AI coding agents. Persistent headless Chromium with ARIA refs, CSS inspection, auth profiles, and 50+ commands. ~50-100 tokens per call vs ~1500 for MCP tools.",
   "keywords": [
@@ -12,12 +12,12 @@
   "publishConfig": { "access": "public" },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tuandm/browser-cli.git"
+    "url": "git+https://github.com/tuandm/verdict-cli.git"
   },
-  "homepage": "https://github.com/tuandm/browser-cli#readme",
-  "bugs": { "url": "https://github.com/tuandm/browser-cli/issues" },
+  "homepage": "https://github.com/tuandm/verdict-cli#readme",
+  "bugs": { "url": "https://github.com/tuandm/verdict-cli/issues" },
   "type": "module",
-  "bin": { "browser-cli": "./bin/browse.mjs" },
+  "bin": { "verdict": "./bin/browse.mjs" },
   "files": ["bin/", "src/", "LICENSE", "README.md"],
   "engines": { "node": ">=18" },
   "dependencies": { "playwright": "^1.59.0" },

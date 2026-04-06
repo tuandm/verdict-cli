@@ -1,28 +1,28 @@
-# Browse CLI
+# Verdict
 
-Token-efficient browser automation for AI coding agents. A persistent headless Chromium CLI that costs **~50-100 tokens per call** instead of ~1,500 with MCP-based browser tools.
+Token-efficient browser verification for AI coding agents. A persistent headless Chromium CLI that costs **~50-100 tokens per call** instead of ~1,500 with MCP-based browser tools.
 
 Built on [Playwright](https://playwright.dev). Zero external dependencies beyond Node.js.
 
 ## Why?
 
-AI coding agents (Claude Code, Codex CLI, Cursor) spend **30,000+ tokens per session** on browser verification through MCP protocol overhead. Browse CLI eliminates that overhead by using plain Bash commands with text output — the same ARIA snapshot technology, 15-30x cheaper.
+AI coding agents (Claude Code, Codex CLI, Cursor) spend **30,000+ tokens per session** on browser verification through MCP protocol overhead. Verdict eliminates that overhead by using plain Bash commands with text output — the same ARIA snapshot technology, 15-30x cheaper.
 
 | Tool | Per call | 20 calls | Savings |
 |------|----------|----------|---------|
 | Playwright MCP | ~1,500 tokens | ~30,000 tokens | — |
-| **Browse CLI** | **~75 tokens** | **~1,500 tokens** | **95%** |
+| **Verdict** | **~75 tokens** | **~1,500 tokens** | **95%** |
 
 ## Installation
 
 ```bash
-npm install -g @tuandm/browser-cli
+npm install -g verdict-cli
 ```
 
 Or install locally in your project:
 
 ```bash
-npm install @tuandm/browser-cli
+npm install verdict-cli
 ```
 
 Chromium is installed automatically via Playwright during `npm install`.
@@ -32,15 +32,15 @@ Chromium is installed automatically via Playwright during `npm install`.
 ## Quick Start
 
 ```bash
-browser-cli goto https://example.com     # Navigate (starts server automatically)
-browser-cli snapshot -i                    # Interactive elements with @e refs
-browser-cli click @e3                      # Click by ref
-browser-cli fill @e5 "hello"              # Fill input
-browser-cli css @e3 font-size             # Get computed CSS value
-browser-cli inspect @e3                    # Full box model + 16 computed styles
-browser-cli screenshot /tmp/page.png      # Take screenshot
-browser-cli snapshot -D                    # Diff: verify action changed the page
-browser-cli stop                           # Shutdown (or auto-stops after 30 min)
+verdict goto https://example.com     # Navigate (starts server automatically)
+verdict snapshot -i                    # Interactive elements with @e refs
+verdict click @e3                      # Click by ref
+verdict fill @e5 "hello"              # Fill input
+verdict css @e3 font-size             # Get computed CSS value
+verdict inspect @e3                    # Full box model + 16 computed styles
+verdict screenshot /tmp/page.png      # Take screenshot
+verdict snapshot -D                    # Diff: verify action changed the page
+verdict stop                           # Shutdown (or auto-stops after 30 min)
 ```
 
 The server auto-starts on first call (~3s). Subsequent calls take ~100-200ms. Cookies, tabs, and state persist between commands.
@@ -55,40 +55,40 @@ Add to `.claude/settings.json`:
 {
   "permissions": {
     "allow": [
-      "Bash(node*browser-cli*)",
+      "Bash(node*verdict*)",
       "Bash(node*browse.mjs*)",
-      "Bash(npx browser-cli*)"
+      "Bash(npx verdict*)"
     ]
   }
 }
 ```
 
-### 2. Add a rule (guides Claude to use Browse CLI by default)
+### 2. Add a rule (guides Claude to use Verdict by default)
 
-Create `.claude/rules/browser-cli.md`:
+Create `.claude/rules/verdict.md`:
 
 ```markdown
-# Browser Testing
+# Browser Verification
 
-Use Browse CLI for all browser verification:
+Use Verdict for all browser verification:
 
-    browser-cli goto <url>
-    browser-cli snapshot -i
-    browser-cli click @e3
+    verdict goto <url>
+    verdict snapshot -i
+    verdict click @e3
 
 Only fall back to Playwright MCP for drag-and-drop or pixel-diff comparisons.
 ```
 
 ### 3. Use in your workflow
 
-Claude will now use Browse CLI commands via Bash instead of `mcp__playwright__*` tools:
+Claude will now use Verdict commands via Bash instead of `mcp__playwright__*` tools:
 
 ```bash
 # Instead of: mcp__playwright__browser_navigate url="..."  (~1,500 tokens)
-browser-cli goto https://example.com                         # (~75 tokens)
+verdict goto https://example.com                         # (~75 tokens)
 
 # Instead of: mcp__playwright__browser_snapshot              (~1,500 tokens)
-browser-cli snapshot -i                                       # (~75 tokens)
+verdict snapshot -i                                       # (~75 tokens)
 ```
 
 ## Features
@@ -120,9 +120,9 @@ Use refs in commands: `click @e2`, `fill @e3 "user@test.com"`, `css @e1 color`
 Verify an action changed the page:
 
 ```bash
-browser-cli snapshot -i          # Baseline
-browser-cli click @e2            # Do something
-browser-cli snapshot -D          # Shows what changed
+verdict snapshot -i          # Baseline
+verdict click @e2            # Do something
+verdict snapshot -D          # Shows what changed
 ```
 
 ```diff
@@ -138,11 +138,11 @@ browser-cli snapshot -D          # Shows what changed
 Read any computed CSS value or get a full box model:
 
 ```bash
-browser-cli css @e3 padding          # padding: 16px
-browser-cli css @e3 font-size        # font-size: 32px
-browser-cli css @e3 background-color # background-color: rgb(255, 0, 0)
+verdict css @e3 padding          # padding: 16px
+verdict css @e3 font-size        # font-size: 32px
+verdict css @e3 background-color # background-color: rgb(255, 0, 0)
 
-browser-cli inspect @e3              # Full JSON: box model + 16 computed styles
+verdict inspect @e3              # Full JSON: box model + 16 computed styles
 ```
 
 ### Live Style Mutation
@@ -150,10 +150,10 @@ browser-cli inspect @e3              # Full JSON: box model + 16 computed styles
 Modify CSS live with undo:
 
 ```bash
-browser-cli style @e3 color red          # Set color: red (was: rgb(0, 0, 0))
-browser-cli style @e3 padding 20px       # Set padding: 20px (was: 16px)
-browser-cli style --history              # Show all changes
-browser-cli style --undo                 # Revert last change
+verdict style @e3 color red          # Set color: red (was: rgb(0, 0, 0))
+verdict style @e3 padding 20px       # Set padding: 20px (was: 16px)
+verdict style --history              # Show all changes
+verdict style --undo                 # Revert last change
 ```
 
 ### Responsive Testing
@@ -161,7 +161,7 @@ browser-cli style --undo                 # Revert last change
 Screenshots at mobile, tablet, and desktop in one command:
 
 ```bash
-browser-cli responsive /tmp
+verdict responsive /tmp
 # mobile (375x812): /tmp/browse-mobile.png
 # tablet (768x1024): /tmp/browse-tablet.png
 # desktop (1280x720): /tmp/browse-desktop.png
@@ -173,18 +173,18 @@ Save and reload authenticated sessions. Encrypted with AES-256-CBC (machine-spec
 
 ```bash
 # First time: log in manually
-browser-cli goto https://your-app.com/login
-browser-cli handoff                          # Opens visible Chrome
+verdict goto https://your-app.com/login
+verdict handoff                          # Opens visible Chrome
 # ... log in (SSO, MFA, CAPTCHA) ...
-browser-cli resume                           # Back to headless
-browser-cli auth-save myapp                  # Save session encrypted
+verdict resume                           # Back to headless
+verdict auth-save myapp                  # Save session encrypted
 
 # Every subsequent time: one command
-browser-cli goto-auth https://your-app.com/dashboard --profile myapp
+verdict goto-auth https://your-app.com/dashboard --profile myapp
 
 # Manage profiles
-browser-cli auth-list                        # List saved profiles
-browser-cli auth-delete myapp                # Delete a profile
+verdict auth-list                        # List saved profiles
+verdict auth-delete myapp                # Delete a profile
 ```
 
 ## Command Reference
@@ -308,8 +308,8 @@ AI Agent  →  Bash tool  →  CLI client (bin/browse.mjs)
 
 ## Comparison
 
-| Feature | Browse CLI | Playwright MCP | @playwright/cli | agent-browser (Vercel) |
-|---------|-----------|---------------|-----------------|----------------------|
+| Feature | Verdict | Playwright MCP | @playwright/cli | agent-browser (Vercel) |
+|---------|---------|---------------|-----------------|----------------------|
 | Token cost/call | **~75** | ~1,500 | ~similar to us | ~similar |
 | CSS inspection | **Yes** | No | No | No |
 | Style mutation | **Yes** (undo) | No | No | No |
@@ -325,9 +325,9 @@ AI Agent  →  Bash tool  →  CLI client (bin/browse.mjs)
 
 This project was inspired by [gstack](https://github.com/garrytan/gstack) by [Garry Tan](https://github.com/garrytan). The gstack project pioneered the idea of using a persistent Chromium daemon with a CLI interface for AI coding agents, demonstrating that plain Bash commands are dramatically more token-efficient than MCP-based browser tools. The core insight — that AI agents should talk to browsers via lightweight CLI calls instead of heavy protocol overhead — came from gstack's browse server architecture.
 
-Browse CLI builds on this foundation with additional capabilities (CSS inspection, live style mutation, responsive presets, auth profiles with encryption, command batching) while using a pure Node.js stack with no Bun dependency.
+Verdict builds on this foundation with additional capabilities (CSS inspection, live style mutation, responsive presets, auth profiles with encryption, command batching) while using a pure Node.js stack with no Bun dependency.
 
-The underlying browser automation technology is [Playwright](https://playwright.dev) by Microsoft, which provides the ARIA snapshot and element ref system that both gstack and Browse CLI rely on.
+The underlying browser automation technology is [Playwright](https://playwright.dev) by Microsoft, which provides the ARIA snapshot and element ref system that both gstack and Verdict rely on.
 
 ## License
 
