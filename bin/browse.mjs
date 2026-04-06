@@ -14,8 +14,8 @@ import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = resolve(process.env.BROWSE_DATA_DIR || resolve(__dirname, '..', '.browse-data'));
-const STATE_FILE = resolve(DATA_DIR, 'browse.json');
+const DATA_DIR = resolve(process.env.VERDICT_DATA_DIR || resolve(__dirname, '..', '.verdict-data'));
+const STATE_FILE = resolve(DATA_DIR, 'verdict.json');
 const SERVER_SCRIPT = resolve(__dirname, '..', 'src', 'server.mjs');
 
 function readState() {

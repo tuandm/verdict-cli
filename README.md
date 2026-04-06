@@ -1,111 +1,81 @@
 # Verdict
 
-Token-efficient browser verification for AI coding agents. A persistent headless Chromium CLI that costs **~50-100 tokens per call** instead of ~1,500 with MCP-based browser tools.
+Token-efficient browser verification for AI coding agents.
 
-Built on [Playwright](https://playwright.dev). Zero external dependencies beyond Node.js.
+[![Gem Version](https://img.shields.io/npm/v/verdict-cli)](https://www.npmjs.com/package/verdict-cli)
+[![Build](https://github.com/tuandm/verdict-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/tuandm/verdict-cli/actions)
+[![License](https://img.shields.io/npm/l/verdict-cli)](https://github.com/tuandm/verdict-cli/blob/main/LICENSE)
 
-## Why?
+A persistent headless Chromium CLI. **~75 tokens per call** vs ~1,500 with Playwright MCP. Same ARIA snapshot technology, 95% cheaper.
 
-AI coding agents (Claude Code, Codex CLI, Cursor) spend **30,000+ tokens per session** on browser verification through MCP protocol overhead. Verdict eliminates that overhead by using plain Bash commands with text output — the same ARIA snapshot technology, 15-30x cheaper.
+Works with Claude Code, Codex CLI, Cursor, Copilot, and Gemini CLI.
 
-| Tool | Per call | 20 calls | Savings |
-|------|----------|----------|---------|
-| Playwright MCP | ~1,500 tokens | ~30,000 tokens | — |
-| **Verdict** | **~75 tokens** | **~1,500 tokens** | **95%** |
+Inspired by [gstack](https://github.com/garrytan/gstack) by [Garry Tan](https://github.com/garrytan).
 
 ## Installation
+
+Install globally:
 
 ```bash
 npm install -g verdict-cli
 ```
 
-Or install locally in your project:
+Or add to your project:
 
 ```bash
 npm install verdict-cli
 ```
 
-Chromium is installed automatically via Playwright during `npm install`.
+Chromium installs automatically via Playwright.
 
 **Requirements:** Node.js 18+
 
 ## Quick Start
 
 ```bash
-verdict goto https://example.com     # Navigate (starts server automatically)
-verdict snapshot -i                    # Interactive elements with @e refs
-verdict click @e3                      # Click by ref
-verdict fill @e5 "hello"              # Fill input
-verdict css @e3 font-size             # Get computed CSS value
-verdict inspect @e3                    # Full box model + 16 computed styles
-verdict screenshot /tmp/page.png      # Take screenshot
-verdict snapshot -D                    # Diff: verify action changed the page
-verdict stop                           # Shutdown (or auto-stops after 30 min)
+verdict goto https://example.com
+verdict snapshot -i
+verdict click @e3
+verdict fill @e5 "hello"
+verdict snapshot -D
+verdict stop
 ```
 
-The server auto-starts on first call (~3s). Subsequent calls take ~100-200ms. Cookies, tabs, and state persist between commands.
+The server auto-starts on first call (~3s). Subsequent calls take ~100-200ms.
 
-## Claude Code Setup
+## Token Savings
 
-### 1. Add permissions (no approval prompts)
+| Tool | Per call | 20 calls | Savings |
+|------|----------|----------|---------|
+| Playwright MCP | ~1,500 tokens | ~30,000 tokens | — |
+| **Verdict** | **~75 tokens** | **~1,500 tokens** | **95%** |
 
-Add to `.claude/settings.json`:
+## Usage
 
-```json
-{
-  "permissions": {
-    "allow": [
-      "Bash(node*verdict*)",
-      "Bash(node*browse.mjs*)",
-      "Bash(npx verdict*)"
-    ]
-  }
-}
-```
-
-### 2. Add a rule (guides Claude to use Verdict by default)
-
-Create `.claude/rules/verdict.md`:
-
-```markdown
-# Browser Verification
-
-Use Verdict for all browser verification:
-
-    verdict goto <url>
-    verdict snapshot -i
-    verdict click @e3
-
-Only fall back to Playwright MCP for drag-and-drop or pixel-diff comparisons.
-```
-
-### 3. Use in your workflow
-
-Claude will now use Verdict commands via Bash instead of `mcp__playwright__*` tools:
+### Navigation
 
 ```bash
-# Instead of: mcp__playwright__browser_navigate url="..."  (~1,500 tokens)
-verdict goto https://example.com                         # (~75 tokens)
-
-# Instead of: mcp__playwright__browser_snapshot              (~1,500 tokens)
-verdict snapshot -i                                       # (~75 tokens)
+verdict goto https://example.com
+verdict back
+verdict forward
+verdict reload
+verdict url
+verdict title
 ```
 
-## Features
+### Snapshots and Refs
 
-### Persistent Server
+Take an ARIA snapshot. Interactive elements get `@e` refs.
 
-The Chromium daemon stays alive between commands. No cold starts after the first call.
+```bash
+verdict snapshot              # full ARIA tree
+verdict snapshot -i           # interactive elements only
+verdict snapshot -D           # diff against previous snapshot
+verdict snapshot -a           # annotated screenshot with ref labels
+verdict snapshot -C           # include cursor-clickable @c refs
+```
 
-- Auto-starts on first use (~3s for Chromium launch)
-- Subsequent calls: ~100-200ms
-- Cookies, localStorage, tabs persist between commands
-- Auto-shuts down after 30 minutes idle
-- Localhost-only with bearer token auth
-
-### ARIA Snapshot with `@e` Refs
-
-Same accessibility tree technology as Playwright MCP. Interactive elements get sequential refs:
+Output looks like this:
 
 ```
 @e1 - link "Home"
@@ -113,16 +83,29 @@ Same accessibility tree technology as Playwright MCP. Interactive elements get s
 @e3 - textbox "Email"
 ```
 
-Use refs in commands: `click @e2`, `fill @e3 "user@test.com"`, `css @e1 color`
+Use refs in any command: `click @e2`, `fill @e3 "test"`.
 
-### Snapshot Diff (`-D`)
+### Interaction
+
+```bash
+verdict click @e3
+verdict fill @e5 "user@test.com"
+verdict select @e7 "Option A"
+verdict hover @e2
+verdict type @e5 "slow typing"
+verdict press Enter
+verdict scroll @e10
+verdict wait 2000
+```
+
+### Snapshot Diff
 
 Verify an action changed the page:
 
 ```bash
-verdict snapshot -i          # Baseline
-verdict click @e2            # Do something
-verdict snapshot -D          # Shows what changed
+verdict snapshot -i
+verdict click @e2
+verdict snapshot -D
 ```
 
 ```diff
@@ -135,199 +118,193 @@ verdict snapshot -D          # Shows what changed
 
 ### CSS Inspection
 
-Read any computed CSS value or get a full box model:
+Read any computed CSS value:
 
 ```bash
-verdict css @e3 padding          # padding: 16px
-verdict css @e3 font-size        # font-size: 32px
-verdict css @e3 background-color # background-color: rgb(255, 0, 0)
+verdict css @e3 padding
+verdict css @e3 font-size
+verdict css @e3 background-color
+```
 
-verdict inspect @e3              # Full JSON: box model + 16 computed styles
+Get a full box model with 16 computed styles:
+
+```bash
+verdict inspect @e3
 ```
 
 ### Live Style Mutation
 
-Modify CSS live with undo:
+Modify CSS live with undo support:
 
 ```bash
-verdict style @e3 color red          # Set color: red (was: rgb(0, 0, 0))
-verdict style @e3 padding 20px       # Set padding: 20px (was: 16px)
-verdict style --history              # Show all changes
-verdict style --undo                 # Revert last change
+verdict style @e3 color red
+verdict style @e3 padding 20px
+verdict style --history
+verdict style --undo
 ```
 
 ### Responsive Testing
 
-Screenshots at mobile, tablet, and desktop in one command:
+Screenshot at mobile, tablet, and desktop in one command:
 
 ```bash
 verdict responsive /tmp
-# mobile (375x812): /tmp/browse-mobile.png
-# tablet (768x1024): /tmp/browse-tablet.png
-# desktop (1280x720): /tmp/browse-desktop.png
 ```
 
-### Auth Profiles
-
-Save and reload authenticated sessions. Encrypted with AES-256-CBC (machine-specific key).
+### Screenshots
 
 ```bash
-# First time: log in manually
-verdict goto https://your-app.com/login
-verdict handoff                          # Opens visible Chrome
-# ... log in (SSO, MFA, CAPTCHA) ...
-verdict resume                           # Back to headless
-verdict auth-save myapp                  # Save session encrypted
-
-# Every subsequent time: one command
-verdict goto-auth https://your-app.com/dashboard --profile myapp
-
-# Manage profiles
-verdict auth-list                        # List saved profiles
-verdict auth-delete myapp                # Delete a profile
+verdict screenshot /tmp/page.png
+verdict screenshot /tmp/full.png --full
+verdict viewport 375x812
 ```
 
-## Command Reference
+### JavaScript and Debugging
 
-### Navigation
-
-| Command | Description |
-|---------|-------------|
-| `goto <url>` | Navigate to URL |
-| `back` / `forward` / `reload` | Browser navigation |
-| `url` | Current URL |
-| `title` | Page title |
-
-### Snapshot & Refs
-
-| Command | Description |
-|---------|-------------|
-| `snapshot` | Full ARIA tree |
-| `snapshot -i` | Interactive elements only |
-| `snapshot -D` | Diff against previous snapshot |
-| `snapshot -a` | Annotated screenshot with ref labels |
-| `snapshot -C` | Include cursor-clickable `@c` refs |
-
-### Interaction
-
-| Command | Description |
-|---------|-------------|
-| `click <ref>` | Click element |
-| `fill <ref> <text>` | Fill input field |
-| `select <ref> <value>` | Select dropdown option |
-| `hover <ref>` | Hover over element |
-| `type <ref> <text>` | Type character by character |
-| `press <key>` | Press key (Enter, Tab, Escape) |
-| `scroll [ref]` | Scroll to element or page bottom |
-| `wait <ms>` | Wait up to 10 seconds |
-
-### Inspection
-
-| Command | Description |
-|---------|-------------|
-| `text [ref]` | Get text content |
-| `css <ref> <property>` | Get computed CSS value |
-| `inspect <ref>` | Full box model + 16 computed styles (JSON) |
-| `js <code>` | Execute JavaScript |
-| `console` | Recent JS console messages |
-| `network` | Recent network requests |
-| `perf` | Navigation timing (DNS, TTFB, DOM ready, load) |
-
-### Visual
-
-| Command | Description |
-|---------|-------------|
-| `screenshot [path] [--full]` | Screenshot (viewport or full page) |
-| `viewport <WxH>` | Set viewport size (e.g., `375x812`) |
-| `responsive [dir]` | Screenshots at mobile + tablet + desktop |
-| `style <ref> <prop> <val>` | Live CSS modification |
-| `style --undo` | Undo last style change |
-| `style --history` | Show all style changes |
+```bash
+verdict js "document.title"
+verdict console
+verdict network
+verdict perf
+```
 
 ### Auth Profiles
 
-| Command | Description |
-|---------|-------------|
-| `auth-save <name>` | Save cookies + localStorage encrypted |
-| `auth-load <name>` | Load a saved profile |
-| `auth-list` | List saved profiles |
-| `auth-delete <name>` | Delete a profile |
-| `handoff` | Switch to visible browser for manual login |
-| `resume` | Return to headless with authenticated session |
-| `goto-auth <url> --profile <name>` | Navigate with auto-loaded auth |
+Save and reload authenticated sessions. Encrypted with AES-256-CBC.
+
+```bash
+verdict goto https://app.com/login
+verdict handoff                          # open visible Chrome
+# ... log in manually (SSO, MFA, CAPTCHA) ...
+verdict resume                           # back to headless
+verdict auth-save myapp                  # save session encrypted
+```
+
+Reload in one command:
+
+```bash
+verdict goto-auth https://app.com/dashboard --profile myapp
+```
+
+Manage profiles:
+
+```bash
+verdict auth-list
+verdict auth-delete myapp
+```
+
+### Tabs and Frames
+
+```bash
+verdict tabs
+verdict newtab https://example.com
+verdict tab 1
+verdict closetab
+verdict frame iframe#content
+verdict frame-exit
+```
+
+### Batch Commands
+
+Run multiple commands in one call:
+
+```bash
+verdict chain '[["goto","https://example.com"],["snapshot","-i"],["console"]]'
+```
+
+### Page Diff
+
+Compare two pages:
+
+```bash
+verdict diff https://example.com https://example.com/about
+```
 
 ### Cookies
 
-| Command | Description |
-|---------|-------------|
-| `cookies [url]` | List cookies |
-| `cookie-set <name> <value> <domain>` | Set cookie manually |
-| `cookie-import <domain>` | Import from system Chrome |
+```bash
+verdict cookies
+verdict cookie-set session abc123 example.com
+verdict cookie-import example.com
+```
 
-### Tabs & Frames
+### Server Management
 
-| Command | Description |
-|---------|-------------|
-| `tabs` | List open tabs |
-| `newtab [url]` / `tab <idx>` / `closetab` | Tab management |
-| `frame [selector]` | Enter iframe (or list frames) |
-| `frame-exit` | Return to main frame |
+```bash
+verdict status
+verdict stop
+```
 
-### Advanced
+## Agent Setup
 
-| Command | Description |
-|---------|-------------|
-| `diff <url1> <url2>` | Text diff between two pages |
-| `chain <json>` | Batch: `[["goto","url"],["snapshot","-i"]]` |
-| `status` | Server info |
-| `stop` | Shutdown server |
+### Claude Code
+
+Add to `.claude/settings.json`:
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(verdict*)",
+      "Bash(npx verdict*)"
+    ]
+  }
+}
+```
+
+Create `.claude/rules/verdict.md`:
+
+```markdown
+Use Verdict for all browser verification:
+
+    verdict goto <url>
+    verdict snapshot -i
+    verdict click @e3
+
+Fall back to Playwright MCP for drag-and-drop only.
+```
+
+### Other Agents
+
+Verdict works with any agent that can run Bash commands. Install globally and call `verdict` directly.
+
+## Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `VERDICT_DATA_DIR` | `.verdict-data/` | Data directory for state and profiles |
+| `VERDICT_IDLE_TIMEOUT` | `1800000` (30 min) | Server idle shutdown in ms |
+| `VERDICT_PORT` | Random | Fixed port for the server |
 
 ## Architecture
 
 ```
-AI Agent  →  Bash tool  →  CLI client (bin/browse.mjs)
-                               ↓ HTTP POST (localhost)
-                           Server (src/server.mjs)
-                               ↓ Playwright API
-                           Chromium (headless)
+AI Agent  →  Bash  →  CLI client (bin/browse.mjs)
+                           ↓ HTTP POST (localhost)
+                       Server (src/server.mjs)
+                           ↓ Playwright API
+                       Chromium (headless)
 ```
 
-**CLI client**: Thin HTTP client. Reads port + token from `.browse-data/browse.json`. Auto-starts server on first call. ~1ms overhead.
-
-**Server**: Persistent Node.js HTTP server. Random port, bearer token, localhost-only. Manages Playwright browser context, ARIA refs, auth profiles.
-
-**Auth profiles**: AES-256-CBC encrypted with scrypt-derived key from `hostname + username`. Stored in `.browse-data/auth-profiles/`. Machine-specific — cannot be decrypted on another machine.
-
-## Configuration
-
-| Environment Variable | Default | Description |
-|---------------------|---------|-------------|
-| `BROWSE_DATA_DIR` | `.browse-data/` | Data directory (state, auth profiles) |
-| `BROWSE_IDLE_TIMEOUT` | `1800000` (30 min) | Server idle shutdown in ms |
-| `BROWSE_PORT` | Random | Fixed port for the server |
+The CLI client is a thin HTTP wrapper (~1ms overhead). The server is a persistent Node.js daemon with random port, bearer token, and localhost-only binding. Auth profiles use AES-256-CBC with a scrypt-derived machine-specific key.
 
 ## Comparison
 
-| Feature | Verdict | Playwright MCP | @playwright/cli | agent-browser (Vercel) |
-|---------|---------|---------------|-----------------|----------------------|
-| Token cost/call | **~75** | ~1,500 | ~similar to us | ~similar |
-| CSS inspection | **Yes** | No | No | No |
-| Style mutation | **Yes** (undo) | No | No | No |
-| Responsive presets | **Yes** | No | No | No |
-| Snapshot diff | **Yes** | No | No | Yes |
-| Auth profiles | **Yes** (AES-256) | No | No | Yes |
-| Handoff mode | **Yes** | No | No | No |
-| Batch commands | **Yes** | No | No | No |
-| Persistent daemon | **Yes** | Per-session | Per-session | Yes |
-| Runtime | Node.js | Node.js | Node.js | Rust + Node.js |
+| Feature | Verdict | Playwright MCP | agent-browser |
+|---------|---------|---------------|---------------|
+| Token cost/call | **~75** | ~1,500 | ~similar |
+| CSS inspection | **Yes** | No | No |
+| Style mutation + undo | **Yes** | No | No |
+| Responsive presets | **Yes** | No | No |
+| Snapshot diff | **Yes** | No | Yes |
+| Auth profiles (AES-256) | **Yes** | No | Yes |
+| Handoff/resume | **Yes** | No | No |
+| Batch commands | **Yes** | No | No |
+| Persistent daemon | **Yes** | Per-session | Yes |
 
-## Acknowledgments
+## Contributing
 
-This project was inspired by [gstack](https://github.com/garrytan/gstack) by [Garry Tan](https://github.com/garrytan). The gstack project pioneered the idea of using a persistent Chromium daemon with a CLI interface for AI coding agents, demonstrating that plain Bash commands are dramatically more token-efficient than MCP-based browser tools. The core insight — that AI agents should talk to browsers via lightweight CLI calls instead of heavy protocol overhead — came from gstack's browse server architecture.
-
-Verdict builds on this foundation with additional capabilities (CSS inspection, live style mutation, responsive presets, auth profiles with encryption, command batching) while using a pure Node.js stack with no Bun dependency.
-
-The underlying browser automation technology is [Playwright](https://playwright.dev) by Microsoft, which provides the ARIA snapshot and element ref system that both gstack and Verdict rely on.
+Fork the repo and create a pull request. Bug reports and feature requests welcome on [GitHub Issues](https://github.com/tuandm/verdict-cli/issues).
 
 ## License
 

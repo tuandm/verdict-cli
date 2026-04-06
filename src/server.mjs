@@ -14,10 +14,10 @@ import { mkdirSync } from 'node:fs';
 import { hostname, userInfo } from 'node:os';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = resolve(process.env.BROWSE_DATA_DIR || resolve(__dirname, '..', '.browse-data'));
-const STATE_FILE = resolve(DATA_DIR, 'browse.json');
+const DATA_DIR = resolve(process.env.VERDICT_DATA_DIR || resolve(__dirname, '..', '.verdict-data'));
+const STATE_FILE = resolve(DATA_DIR, 'verdict.json');
 const AUTH_DIR = resolve(DATA_DIR, 'auth-profiles');
-const IDLE_TIMEOUT = parseInt(process.env.BROWSE_IDLE_TIMEOUT) || 30 * 60 * 1000;
+const IDLE_TIMEOUT = parseInt(process.env.VERDICT_IDLE_TIMEOUT) || 30 * 60 * 1000;
 
 mkdirSync(DATA_DIR, { recursive: true });
 mkdirSync(AUTH_DIR, { recursive: true });
@@ -197,9 +197,9 @@ const commands = {
             document.body.appendChild(label);
           }
         }, Array.from(refs.entries()).map(([ref, { role }]) => ({ ref, selector: `[role="${role}"]` })));
-        await page.screenshot({ path: '/tmp/browse-annotated.png', fullPage: false });
+        await page.screenshot({ path: '/tmp/verdict-annotated.png', fullPage: false });
         await page.evaluate(() => document.querySelectorAll('.__browse_annotation').forEach(el => el.remove()));
-        lastSnapshot += '\nAnnotated screenshot saved to /tmp/browse-annotated.png';
+        lastSnapshot += '\nAnnotated screenshot saved to /tmp/verdict-annotated.png';
       }
 
       if (diffMode && previousSnapshot) {
@@ -304,7 +304,7 @@ const commands = {
 
   // Visual
   async screenshot(args) {
-    const path = args[0] || '/tmp/browse-screenshot.png';
+    const path = args[0] || '/tmp/verdict-screenshot.png';
     const sel = args.find(a => a.startsWith('@e') || (a.startsWith('.') || a.startsWith('#')) && a !== path);
     if (sel && !sel.startsWith('--')) { await (await resolveRef(sel)).screenshot({ path, timeout: 5000 }); }
     else { await page.screenshot({ path, fullPage: args.includes('--full') }); }
@@ -322,7 +322,7 @@ const commands = {
     const results = [];
     for (const { name, width, height } of presets) {
       await page.setViewportSize({ width, height });
-      const file = `${dir}/browse-${name}.png`;
+      const file = `${dir}/verdict-${name}.png`;
       await page.screenshot({ path: file, fullPage: true });
       results.push(`${name} (${width}x${height}): ${file}`);
     }
@@ -449,7 +449,7 @@ const commands = {
     const domain = args[0]; if (!domain) return 'Error: domain required';
     const cookieDb = resolve(process.env.HOME, process.platform === 'darwin' ? 'Library/Application Support/Google/Chrome/Default/Cookies' : '.config/google-chrome/Default/Cookies');
     if (!existsSync(cookieDb)) return `Chrome cookie DB not found at ${cookieDb}`;
-    const tmp = '/tmp/browse-cookies-copy';
+    const tmp = '/tmp/verdict-cookies-copy';
     copyFileSync(cookieDb, tmp);
     try {
       const raw = execSync(`sqlite3 -json "${tmp}" "SELECT name, value, host_key, path, is_secure, is_httponly FROM cookies WHERE host_key LIKE '%${domain}%'"`, { encoding: 'utf8', timeout: 5000 });
@@ -511,7 +511,7 @@ page.on('console', msg => { consoleMessages.push(`[${msg.type()}] ${msg.text()}`
 page.on('response', r => { networkRequests.push({ method: r.request().method(), status: r.status(), url: r.url().slice(0, 120) }); if (networkRequests.length > 50) networkRequests.shift(); });
 
 // HTTP server
-const port = parseInt(process.env.BROWSE_PORT) || (10000 + Math.floor(Math.random() * 50000));
+const port = parseInt(process.env.VERDICT_PORT) || (10000 + Math.floor(Math.random() * 50000));
 const token = crypto.randomUUID();
 const server = createServer(async (req, res) => {
   resetIdle();
