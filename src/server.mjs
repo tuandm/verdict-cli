@@ -14,7 +14,10 @@ import { mkdirSync } from 'node:fs';
 import { hostname, userInfo } from 'node:os';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = resolve(process.env.VERDICT_DATA_DIR || resolve(__dirname, '..', '.verdict-data'));
+const BASE_DATA_DIR = resolve(process.env.VERDICT_DATA_DIR || resolve(__dirname, '..', '.verdict-data'));
+const DATA_DIR = process.env.VERDICT_SESSION
+  ? resolve(BASE_DATA_DIR, 'sessions', process.env.VERDICT_SESSION)
+  : BASE_DATA_DIR;
 const STATE_FILE = resolve(DATA_DIR, 'verdict.json');
 const AUTH_DIR = resolve(DATA_DIR, 'auth-profiles');
 const IDLE_TIMEOUT = parseInt(process.env.VERDICT_IDLE_TIMEOUT) || 30 * 60 * 1000;
