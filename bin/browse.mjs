@@ -17,14 +17,16 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const BASE_DATA_DIR = resolve(process.env.VERDICT_DATA_DIR || resolve(__dirname, '..', '.verdict-data'));
 const SERVER_SCRIPT = resolve(__dirname, '..', 'src', 'server.mjs');
 
-// Parse --session <name> and --json from argv early
+// Parse --session <name>, --storage-state <path>, and --json from argv early
 const rawArgs = process.argv.slice(2);
 const jsonFlag = rawArgs.includes('--json');
 let sessionName = null;
+let storageStatePath = null;
 const filtered = [];
 for (let i = 0; i < rawArgs.length; i++) {
   if (rawArgs[i] === '--json') continue;
   if (rawArgs[i] === '--session' && rawArgs[i + 1]) { sessionName = rawArgs[++i]; continue; }
+  if (rawArgs[i] === '--storage-state' && rawArgs[i + 1]) { storageStatePath = rawArgs[++i]; continue; }
   filtered.push(rawArgs[i]);
 }
 const [command, ...args] = filtered;
@@ -117,6 +119,10 @@ Auth Profiles:
   handoff                   Switch to visible browser for manual login
   resume                    Return to headless after login
   goto-auth <url> --profile <name>  Navigate with auto-loaded auth
+  storage-state-load <path> Load Playwright storageState JSON (cookies + localStorage)
+
+Flags (global):
+  --storage-state <path>    Load Playwright storageState JSON before running command
 
 Cookies:
   cookies [url]             List         cookie-set <n> <v> <dom>  Set manually
@@ -191,11 +197,21 @@ if (!state || !isAlive(state.pid)) {
 }
 
 try {
+  if (storageStatePath) {
+    const loadResult = await send(state, 'storage-state-load', [storageStatePath]);
+    if (loadResult.startsWith('Error')) { outputError(loadResult); }
+    process.stderr.write(`${loadResult}\n`);
+  }
   output(await send(state, command, args));
 } catch (e) {
   if (e.cause?.code === 'ECONNREFUSED' || e.cause?.code === 'UND_ERR_SOCKET' || e.message?.includes('fetch failed')) {
     process.stderr.write('Server down, restarting...\n');
     state = await startServer();
+    if (storageStatePath) {
+      const loadResult = await send(state, 'storage-state-load', [storageStatePath]);
+      if (loadResult.startsWith('Error')) { outputError(loadResult); }
+      process.stderr.write(`${loadResult}\n`);
+    }
     output(await send(state, command, args));
   } else if (command === "stop") { output("Server stopped."); } else { outputError(e.message); }
 }

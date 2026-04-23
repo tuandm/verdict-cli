@@ -398,6 +398,22 @@ const commands = {
     const p = profilePath(name); if (!existsSync(p)) return `Profile "${name}" not found.`;
     unlinkSync(p); return `Profile "${name}" deleted.`;
   },
+  async 'storage-state-load'(args) {
+    const filePath = args[0]; if (!filePath) return 'Error: path required. Usage: storage-state-load <path>';
+    if (!existsSync(filePath)) return `Error: file not found: ${filePath}`;
+    try {
+      const state = JSON.parse(readFileSync(filePath, 'utf8'));
+      await context.clearCookies();
+      if (state.cookies?.length) await context.addCookies(state.cookies);
+      const origins = state.origins || [];
+      for (const { origin, localStorage: items } of origins) {
+        if (!items?.length) continue;
+        await page.goto(origin, { waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => {});
+        await page.evaluate((ls) => { for (const { name, value } of ls) localStorage.setItem(name, value); }, items);
+      }
+      return `Loaded storageState from ${filePath}: ${state.cookies?.length || 0} cookies, ${origins.length} origin(s)`;
+    } catch (e) { return `Error loading storageState: ${e.message}`; }
+  },
   async handoff() {
     const cookies = await context.cookies();
     const currentUrl = page.url();
