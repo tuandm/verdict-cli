@@ -30,8 +30,9 @@ A failure in **verify** costs a deleted tag:
 git tag -d v0.2.0 && git push origin :refs/tags/v0.2.0
 ```
 
-Once **publish** has succeeded the version number is spent - npm does not allow
-re-publishing one. Fix forward with the next patch.
+Once **publish** has succeeded the version number is spent. Unpublishing is possible
+within 72 hours, but npm then blocks that version forever, so either way it is gone. Fix
+forward with the next patch.
 
 ## One-time setup
 
@@ -56,9 +57,9 @@ break even when no code signature moved.
 - **minor** - new commands or flags
 - **major** - a removed or renamed command, flag, output field, or env var
 
-**While the package is pre-1.0** those rules shift down one: additive changes ship as a
-patch and a minor marks a break, which is what semver permits for 0.x and what the 0.1.x
-line has done so far. The list above applies from 1.0.
+**While the package is pre-1.0**, expect both additive changes and small breaks to ship
+as a patch - semver puts no constraint on 0.x, and 0.1.1 already shipped new flags
+alongside the `BROWSE_*` to `VERDICT_*` rename. The list above applies from 1.0.
 
 ## Backfilling tags for 0.1.0 and 0.1.1
 
