@@ -1,0 +1,203 @@
+name: Release
+
+# A tag is the trigger, not a manual dispatch: the thing being released has to be a commit
+# that already went through PR CI on main, and a tag is the only artifact that names one
+# immutably. Nothing here writes to main, so the read-only token posture of the other
+# workflows survives.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  # Everything that can say "do not ship this" runs before any job holding a publish
+  # credential. A failure here costs a deleted tag; a failure after publish costs a
+  # version number that can never be reused.
+  verify:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      published: ${{ steps.published.outputs.exists }}
+
+    steps:
+      # Pinned to a commit, not a tag: a tag is mutable. Dependabot keeps the pin and its
+      # comment current. fetch-depth 0 because the ancestry check below needs main's history.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # A tag can be pushed from any commit, including one that never opened a PR. Refusing
+      # a tag that is not an ancestor of main is what makes "released code passed CI" true
+      # rather than merely likely.
+      - name: Require the tag to be on main
+        run: |
+          git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::$GITHUB_REF_NAME points at a commit that is not on main"
+            exit 1
+          fi
+
+      # package.json is what npm publishes; the tag is what humans and the GitHub release
+      # page show. When they disagree the registry and the changelog describe different
+      # code, and nothing downstream ever notices.
+      - name: Require package.json to match the tag
+        id: version
+        run: |
+          version=$(node -p "require('./package.json').version")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match package.json version $version"
+            exit 1
+          fi
+
+      # The plugin manifest carries its own version and npm version does not touch it, so it
+      # drifted silently once already (0.1.0 against a published 0.1.1). The `version` npm
+      # script keeps them in step; this is the check that proves the script ran.
+      - name: Require the plugin manifest to match
+        run: |
+          plugin=$(node -p "require('./.claude-plugin/plugin.json').version")
+          if [ "$plugin" != "${{ steps.version.outputs.version }}" ]; then
+            echo "::error::.claude-plugin/plugin.json is $plugin, package.json is ${{ steps.version.outputs.version }}"
+            exit 1
+          fi
+
+      # A workflow gets re-run, and a second publish of a live version is a hard 403.
+      # Checking first turns that into a skip, so a rerun after a flake is safe.
+      - name: Check whether this version is already on npm
+        id: published
+        run: |
+          if [ -n "$(npm view "verdict-cli@${{ steps.version.outputs.version }}" version 2>/dev/null)" ]; then
+            echo "::notice::verdict-cli@${{ steps.version.outputs.version }} is already published; publish will be skipped"
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: npm
+
+      # Same shape as pr-ci.yml: --ignore-scripts keeps the Chromium download out of npm ci
+      # so it can be cached on its own.
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Resolve the Playwright version
+        id: pw
+        run: echo "version=$(node -p "require('./node_modules/playwright/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Chromium
+        id: chromium-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: chromium-${{ runner.os }}-${{ steps.pw.outputs.version }}
+
+      - name: Install Chromium
+        if: steps.chromium-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      # A cache hit restores the browser but not the OS packages it links against.
+      - name: Install Chromium system dependencies
+        if: steps.chromium-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      # The browser tests skip themselves when Chromium is missing, so a suite that skipped
+      # everything would pass silently and prove nothing. Fail on any skip.
+      - name: Run tests
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tee result.txt
+          if grep -qE 'skipped [1-9]' result.txt; then
+            echo "::error::tests were skipped; Chromium did not install"
+            exit 1
+          fi
+
+      # Catches the packaging mistakes that only appear in the tarball: a file missing from
+      # the `files` allowlist, or a secret swept in by adding one. Cheap, and the only place
+      # this is visible before it is on the registry forever.
+      - name: Show what would be published
+        run: npm pack --dry-run
+
+  publish:
+    needs: verify
+    if: needs.verify.outputs.published == 'false'
+    runs-on: ubuntu-latest
+
+    # The only job that holds a publish credential, and it holds nothing else. id-token is
+    # for npm trusted publishing (OIDC): no NPM_TOKEN is stored in this repo, so there is no
+    # long-lived secret to leak, and provenance is attested to this workflow and tag.
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Node 24 for its bundled npm 11: trusted publishing needs npm >= 11.5.1, and Node 22
+      # still ships npm 10. This pin is about the npm version, not the runtime the package
+      # supports - the published code still targets the engines range in package.json.
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          registry-url: https://registry.npmjs.org
+          cache: npm
+
+      # No npm ci. There is no prepack or prepublishOnly script, so publishing needs no
+      # node_modules - and not installing them means no dependency code runs at all in the
+      # job that holds the OIDC token.
+
+      # setup-node picks the newest 24.x, but the pin itself guarantees only Node 24.0,
+      # which shipped npm 11.3. Assert the floor rather than assume it; failing here is a
+      # clear message, whereas an npm below it falls back to token auth and 401s.
+      - name: Require an npm that supports trusted publishing
+        run: |
+          npm_version=$(npm --version)
+          if [ "$(printf '%s\n11.5.1\n' "$npm_version" | sort -V | head -1)" != "11.5.1" ]; then
+            echo "::error::npm $npm_version is below the 11.5.1 trusted-publishing floor"
+            exit 1
+          fi
+
+      - name: Publish to npm
+        run: npm publish --provenance --access public
+
+  github-release:
+    needs: [verify, publish]
+    # always() so a version that was already on npm still gets its release page, and a
+    # rerun after a failure here does not require re-publishing.
+    if: |
+      always() && needs.verify.result == 'success' &&
+      (needs.publish.result == 'success' || needs.publish.result == 'skipped')
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write # required to create the release
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # gh rather than a third-party action, matching dependabot-auto-merge.yml: one less
+      # supply-chain edge in a job that holds a write token. --verify-tag refuses to invent
+      # a tag if the ref is somehow gone; --generate-notes writes the notes from the merged
+      # PRs, which is why no CHANGELOG file is proposed here.
+      - name: Create the GitHub release
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo "::notice::release $GITHUB_REF_NAME already exists"
+            exit 0
+          fi
+          gh release create "$GITHUB_REF_NAME" \
+            --verify-tag \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

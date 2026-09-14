@@ -48,6 +48,7 @@
   "scripts": {
     "postinstall": "npx playwright install chromium",
     "start": "node bin/browse.mjs",
-    "test": "node --test test/*.test.mjs"
+    "test": "node --test test/*.test.mjs",
+    "version": "node scripts/sync-plugin-version.mjs"
   }
 }

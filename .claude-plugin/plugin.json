@@ -1,6 +1,6 @@
 {
   "name": "verdict",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Token-efficient browser verification for AI coding agents. Persistent headless Chromium with ARIA refs, CSS inspection, auth profiles. ~50-100 tokens per call vs ~1500 for MCP tools. Use for all browser verification, page testing, form filling, CSS debugging, responsive testing, and authenticated page access.",
   "author": {
     "name": "Tuan Duong",
