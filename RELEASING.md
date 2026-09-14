@@ -65,9 +65,16 @@ alongside the `BROWSE_*` to `VERDICT_*` rename. The list above applies from 1.0.
 
 Both are on npm but neither has a git tag, so neither has a release page. A tag push runs
 the workflow that exists **at the tagged commit**, and neither of those commits contains
-one, so backfilled tags do nothing - they are safe, and they also publish nothing. Create
-those pages by hand if you want them:
+one, so backfilled tags do nothing - they are safe, and they also publish nothing.
+
+The targets below are the commits npm actually published, read back with
+`npm view verdict-cli@<version> gitHead`, not guessed from the log:
 
 ```bash
+gh release create v0.1.0 --target d4f76bf --generate-notes
 gh release create v0.1.1 --target 883f5bb --generate-notes
 ```
+
+Optional, and not a prerequisite for the next release: with no earlier tag,
+`--generate-notes` falls back to a single Full Changelog link rather than an enumerated
+list, and a release page can be deleted and recreated later if you change your mind.
