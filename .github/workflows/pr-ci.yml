@@ -1,0 +1,70 @@
+name: PR CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A new push supersedes the run in flight; Chromium downloads are the expensive part.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['20', '22', '24']
+
+    steps:
+      # Pinned to a commit, not a tag: a tag is mutable and this token can write to the
+      # repo. Dependabot keeps the pin and its comment current.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      # --ignore-scripts skips playwright's postinstall so the browser download is a
+      # separate, cacheable step rather than an uncacheable side effect of npm ci.
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Resolve the Playwright version
+        id: pw
+        run: echo "version=$(node -p "require('./node_modules/playwright/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Chromium
+        id: chromium-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: chromium-${{ runner.os }}-${{ steps.pw.outputs.version }}
+
+      - name: Install Chromium
+        if: steps.chromium-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      # A cache hit restores the browser but not the OS packages it links against.
+      - name: Install Chromium system dependencies
+        if: steps.chromium-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      # The browser tests skip themselves when Chromium is missing, so a suite that
+      # skipped everything would pass silently and prove nothing. Fail on any skip.
+      - name: Run tests
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tee result.txt
+          if grep -qE 'skipped [1-9]' result.txt; then
+            echo "::error::tests were skipped; Chromium did not install"
+            exit 1
+          fi

@@ -1,0 +1,25 @@
+version: 2
+
+updates:
+  # Actions are the supply chain with the widest blast radius here: a compromised action
+  # runs with the workflow's token. They are pinned to commit SHAs, which is only
+  # maintainable because Dependabot rewrites the pin and the version comment together.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    labels: [dependencies, github-actions]
+    groups:
+      # One PR a week for the safe bumps. Majors are deliberately left out of the group so
+      # each lands alone, is not auto-merged, and gets read.
+      actions-minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    labels: [dependencies, npm]
+    groups:
+      npm-minor-and-patch:
+        update-types: [minor, patch]

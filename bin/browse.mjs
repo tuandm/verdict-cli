@@ -8,7 +8,7 @@
  *   npx verdict snapshot -i
  *   npx verdict click @e3
  */
-import { readFileSync, existsSync, readdirSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync, unlinkSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
@@ -191,6 +191,15 @@ if (command === 'sessions') {
 
 let state = readState();
 if (!state || !isAlive(state.pid)) {
+  // Nothing to shut down. Starting a server so that we can immediately stop it is both
+  // surprising and slow, and it leaves the caller with a fresh Chromium they did not ask for.
+  if (command === 'stop') {
+    // The recorded pid is dead, so the record is stale. Clearing it keeps `stop`
+    // idempotent and stops a recycled pid from later passing the isAlive check.
+    try { if (existsSync(STATE_FILE)) unlinkSync(STATE_FILE); } catch {}
+    output('Server stopped.');
+    process.exit(0);
+  }
   process.stderr.write('Starting verdict server...\n');
   state = await startServer();
   process.stderr.write(`Server ready (port ${state.port})\n`);
@@ -204,14 +213,48 @@ try {
   }
   output(await send(state, command, args));
 } catch (e) {
-  if (e.cause?.code === 'ECONNREFUSED' || e.cause?.code === 'UND_ERR_SOCKET' || e.message?.includes('fetch failed')) {
+  // A successful shutdown closes the socket while the response is in flight, so a healthy
+  // `stop` always surfaces as UND_ERR_SOCKET / 'fetch failed'. It has to be recognised
+  // before the reconnect branch, which would otherwise start a replacement server, retry,
+  // and throw again from inside this catch where nothing handles it.
+  //
+  // The socket-close test is deliberately part of the condition: a `stop` that fails any
+  // OTHER way (a 500 from the handler, a malformed response, a wedged server) must NOT
+  // report success, or the caller is told the browser is gone while it is still running.
+  const socketClosed = e.cause?.code === 'ECONNREFUSED'
+    || e.cause?.code === 'UND_ERR_SOCKET'
+    || e.message?.includes('fetch failed');
+
+  // Deliberately NARROWER than socketClosed. Node reports most transport failures as a
+  // generic `TypeError: fetch failed`, including a reset from a server that accepted the
+  // request and then wedged. Treating that as a successful stop would print "Server
+  // stopped." and delete the pid record while Chromium is still running, leaving an
+  // orphan nothing can reach. Only these two codes actually mean the server is gone:
+  // the socket closing under a completed shutdown, or nothing listening at all.
+  const stopSucceeded = e.cause?.code === 'UND_ERR_SOCKET'
+    || e.cause?.code === 'ECONNREFUSED';
+
+  if (command === 'stop' && stopSucceeded) {
+    // The server unlinks STATE_FILE in its own shutdown(), before the socket closes, so
+    // normally there is nothing left here. This also covers ECONNREFUSED, where nothing was
+    // listening and no shutdown ran: without it a stale record whose pid has been recycled
+    // would keep passing isAlive and point every later command at a dead port.
+    try { if (existsSync(STATE_FILE)) unlinkSync(STATE_FILE); } catch {}
+    output('Server stopped.');
+  } else if (socketClosed) {
     process.stderr.write('Server down, restarting...\n');
-    state = await startServer();
-    if (storageStatePath) {
-      const loadResult = await send(state, 'storage-state-load', [storageStatePath]);
-      if (loadResult.startsWith('Error')) { outputError(loadResult); }
-      process.stderr.write(`${loadResult}\n`);
+    try {
+      state = await startServer();
+      if (storageStatePath) {
+        const loadResult = await send(state, 'storage-state-load', [storageStatePath]);
+        if (loadResult.startsWith('Error')) { outputError(loadResult); }
+        process.stderr.write(`${loadResult}\n`);
+      }
+      output(await send(state, command, args));
+    } catch (retryErr) {
+      // Carry the original failure too: retryErr alone loses why the server went down.
+      outputError(`server restart failed: ${retryErr.message}`
+        + ` (original: ${e.cause?.code || e.message})`);
     }
-    output(await send(state, command, args));
-  } else if (command === "stop") { output("Server stopped."); } else { outputError(e.message); }
+  } else { outputError(e.message); }
 }

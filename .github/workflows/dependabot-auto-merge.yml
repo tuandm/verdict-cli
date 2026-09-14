@@ -1,0 +1,45 @@
+name: Dependabot auto-merge
+
+# `pull_request`, never `pull_request_target`. The latter runs against the base repo with a
+# writable token and access to secrets while checking out the PR's code, which is how an
+# auto-merge workflow turns into arbitrary code execution on the default branch.
+on: pull_request
+
+permissions:
+  contents: read
+
+jobs:
+  auto-merge:
+    # The identity check is on the PR author, not github.actor: actor is whoever triggered
+    # the run, which a rerun by a human would change.
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write # required to turn auto-merge on
+      pull-requests: write
+
+    steps:
+      # This job deliberately never checks the PR out. It reads metadata and flips a flag,
+      # so no code from the updated dependency is executed while a write token is in scope.
+      - name: Read the update metadata
+        id: meta
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
+
+      # Majors are excluded on purpose: semver says they may break, and the point of the
+      # exercise is to remove toil from the safe bumps, not to stop reading the risky ones.
+      - name: Enable auto-merge for patch and minor updates
+        if: |
+          steps.meta.outputs.update-type == 'version-update:semver-patch' ||
+          steps.meta.outputs.update-type == 'version-update:semver-minor'
+        run: gh pr merge --auto --squash "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Explain why a major was left alone
+        if: steps.meta.outputs.update-type == 'version-update:semver-major'
+        run: gh pr comment "$PR_URL" --body "Major version bump - not auto-merged. Needs a human."
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
