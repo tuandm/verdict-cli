@@ -193,6 +193,32 @@ verdict auth-list
 verdict auth-delete myapp
 ```
 
+### Playwright storageState
+
+Auth profiles are Verdict's own encrypted store, for sessions you logged into by hand.
+`storageState` is the interchange path: load auth you already have from Playwright.
+
+```bash
+# A file Playwright wrote, via context.storageState({ path }) or
+# npx playwright codegen --save-storage=state.json
+verdict storage-state-load ./state.json
+
+# Or as a global flag, applied before the command runs
+verdict --storage-state ./state.json goto https://app.com/dashboard
+```
+
+The flag composes with `--session`, and is re-applied if the server had to restart.
+
+Three things to know:
+
+- Loading **replaces** all cookies rather than merging into them.
+- Seeding `localStorage` means navigating to each origin in the file, so the load needs
+  network and leaves the page on the last origin. Issue your `goto` after it, not before.
+- `verdict cookies` lists cookies for the current page's URL, so straight after a load it
+  reports `No cookies.` until you navigate. The cookies are there; the listing is scoped.
+
+The file holds cookies in plaintext. Auth profiles are encrypted; this is not.
+
 ### Tabs and Frames
 
 ```bash

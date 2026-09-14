@@ -20,3 +20,4 @@ Common workflows:
 - Test form: `verdict fill @eN "text"` then `verdict click @eM` then `verdict snapshot -D`
 - Check CSS: `verdict css @eN <property>` or `verdict inspect @eN`
 - Auth login: `verdict handoff` → login manually → `verdict resume` → `verdict auth-save <name>`
+- Auth from Playwright: `verdict --storage-state ./state.json goto <url>`

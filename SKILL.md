@@ -42,6 +42,9 @@ node $B handoff                  # Opens visible Chrome for manual login
 node $B resume                   # Back to headless
 node $B auth-save myapp          # Save session encrypted
 node $B goto-auth <url> --profile myapp  # Auto-load auth
+
+# Or reuse auth Playwright already saved (plaintext cookies, replaces existing ones)
+node $B --storage-state ./state.json goto <url>
 ```
 
 ## Intent → Command
@@ -57,6 +60,7 @@ node $B goto-auth <url> --profile myapp  # Auto-load auth
 | Check JS errors | `console` |
 | Test responsive | `responsive /tmp` |
 | Multiple checks at once | `chain [["goto","url"],["snapshot","-i"],["console"]]` |
+| Reuse a Playwright auth file | `--storage-state ./state.json goto <url>` |
 
 ## When NOT to use (fall back to Playwright MCP)
 
