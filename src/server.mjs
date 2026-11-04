@@ -19,8 +19,11 @@ const DATA_DIR = process.env.VERDICT_SESSION
   ? resolve(BASE_DATA_DIR, 'sessions', process.env.VERDICT_SESSION)
   : BASE_DATA_DIR;
 const STATE_FILE = resolve(DATA_DIR, 'verdict.json');
-const AUTH_DIR = resolve(DATA_DIR, 'auth-profiles');
+// Shared by every --session: the key below is per machine, not per session.
+const AUTH_DIR = resolve(BASE_DATA_DIR, 'auth-profiles');
 const IDLE_TIMEOUT = parseInt(process.env.VERDICT_IDLE_TIMEOUT) || 30 * 60 * 1000;
+// Pages that poll or stream never reach networkidle; past this, the caller checks the DOM itself.
+const IDLE_WAIT_MS = parseInt(process.env.VERDICT_IDLE_WAIT_MS) || 3000;
 
 mkdirSync(DATA_DIR, { recursive: true });
 mkdirSync(AUTH_DIR, { recursive: true });
@@ -137,7 +140,7 @@ const commands = {
     const url = args[0];
     if (!url) return 'Error: URL required';
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
-    await page.waitForLoadState('networkidle').catch(() => {});
+    await page.waitForLoadState('networkidle', { timeout: IDLE_WAIT_MS }).catch(() => {});
     return `Navigated to ${page.url()}`;
   },
   async back() { await page.goBack({ waitUntil: 'domcontentloaded' }); return `Back to ${page.url()}`; },
@@ -225,7 +228,7 @@ const commands = {
   async click(args) {
     const sel = args[0]; if (!sel) return 'Error: selector required';
     await (await resolveRef(sel)).click({ timeout: 5000 });
-    await page.waitForLoadState('networkidle').catch(() => {});
+    await page.waitForLoadState('networkidle', { timeout: IDLE_WAIT_MS }).catch(() => {});
     return `Clicked ${sel}`;
   },
   async fill(args) {
@@ -447,7 +450,7 @@ const commands = {
     const url = clean[0]; if (!url) return 'Error: URL required';
     if (profileName) { const r = await commands['auth-load']([profileName]); if (r.startsWith('Error')) return r; }
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
-    await page.waitForLoadState('networkidle').catch(() => {});
+    await page.waitForLoadState('networkidle', { timeout: IDLE_WAIT_MS }).catch(() => {});
     const finalUrl = page.url();
     if (finalUrl.includes('/login') || finalUrl.includes('/oauth') || finalUrl.includes('sso.'))
       return `Redirected to login: ${finalUrl}\nSession expired. Run: handoff -> login manually -> resume -> auth-save ${profileName || 'default'}`;
